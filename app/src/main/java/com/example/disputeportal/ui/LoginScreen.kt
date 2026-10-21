@@ -27,12 +27,16 @@ import androidx.compose.ui.unit.dp
 private val EMAIL_PATTERN = Regex("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")
 private const val MIN_PASSWORD_LENGTH = 8
 
+internal fun isValidEmail(email: String): Boolean = EMAIL_PATTERN.matches(email.trim())
+
+internal fun isValidPassword(password: String): Boolean = password.length >= MIN_PASSWORD_LENGTH
+
 @Composable
 fun LoginScreen(state: SyncState, onSignIn: (String, String) -> Unit) {
     var email by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
-    val emailValid = EMAIL_PATTERN.matches(email.trim())
-    val passwordValid = password.length >= MIN_PASSWORD_LENGTH
+    val emailValid = isValidEmail(email)
+    val passwordValid = isValidPassword(password)
 
     Column(
         modifier = Modifier
