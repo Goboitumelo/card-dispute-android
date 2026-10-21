@@ -1,15 +1,14 @@
 package com.example.disputeportal.data.remote
 
 import com.example.disputeportal.session.Session
-import okhttp3.Credentials
 import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
 /**
- * Builds a [DisputeApi] that attaches the current session's credentials to each request.
+ * Builds a [DisputeApi] that attaches the current session's bearer token to each request.
  *
- * @param session source of the credentials, read on every request
+ * @param session source of the token, read on every request
  * @param baseUrl base URL of the API, ending in a slash
  * @return a Retrofit implementation of [DisputeApi]
  */
@@ -22,7 +21,7 @@ fun buildApi(session: Session, baseUrl: String): DisputeApi {
                 request
             } else {
                 request.newBuilder()
-                    .header("Authorization", Credentials.basic(login.email, login.password))
+                    .header("Authorization", "Bearer ${login.token}")
                     .build()
             }
             chain.proceed(authorised)

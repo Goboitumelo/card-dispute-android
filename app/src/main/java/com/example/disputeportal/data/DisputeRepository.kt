@@ -1,17 +1,16 @@
 package com.example.disputeportal.data
 
 import androidx.room.withTransaction
-import com.example.disputeportal.data.remote.SubmitDisputeRequestDto
-import com.example.disputeportal.data.remote.WithdrawRequestDto
-import java.io.IOException
-import retrofit2.HttpException
 import com.example.disputeportal.data.local.AppDatabase
 import com.example.disputeportal.data.local.DisputeEntity
 import com.example.disputeportal.data.local.TransactionEntity
 import com.example.disputeportal.data.remote.DisputeApi
 import com.example.disputeportal.data.remote.DisputeDto
 import com.example.disputeportal.data.remote.HistoryDto
+import com.example.disputeportal.data.remote.LoginRequestDto
+import com.example.disputeportal.data.remote.SubmitDisputeRequestDto
 import com.example.disputeportal.data.remote.TransactionDto
+import com.example.disputeportal.data.remote.WithdrawRequestDto
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
@@ -46,7 +45,22 @@ class DisputeRepository(
     suspend fun clearCache() = withContext(Dispatchers.IO) { db.clearAllTables() }
 
     /**
-     * Opens a dispute and refreshes the cache.
+     * Exchanges the credentials for a bearer token.
+     *
+     * @param email the user's email address
+     * @param password the user's password
+     * @return the raw bearer token
+     */
+    suspend fun login(email: String, password: String): String =
+        api.login(LoginRequestDto(email, password)).token
+
+    /** Revokes the current bearer token on the server. */
+    suspend fun logout() {
+        api.logout()
+    }
+
+    /**
+     * Opens a dispute.
      *
      * @param transactionId the transaction being disputed
      * @param reason one of the backend `DisputeReason` names
@@ -60,17 +74,15 @@ class DisputeRepository(
         disputedAmountMinor: Long,
     ) {
         api.submit(SubmitDisputeRequestDto(transactionId, reason, description, disputedAmountMinor))
-        refreshAfterWrite()
     }
 
     /**
-     * Withdraws a dispute and refreshes the cache.
+     * Withdraws a dispute.
      *
      * @param disputeId the dispute to withdraw
      */
     suspend fun withdrawDispute(disputeId: String) {
         api.withdraw(disputeId, WithdrawRequestDto(note = null))
-        refreshAfterWrite()
     }
 
     /**
@@ -80,19 +92,6 @@ class DisputeRepository(
      * @return the status changes recorded for the dispute
      */
     suspend fun history(disputeId: String): List<HistoryDto> = api.history(disputeId)
-
-    /**
-     * Refreshes the cache after a successful write.
-     *
-     * A failed refresh is ignored because the write already succeeded. The next manual refresh retries it.
-     */
-    private suspend fun refreshAfterWrite() {
-        try {
-            refresh()
-        } catch (e: IOException) {
-        } catch (e: HttpException) {
-        }
-    }
 }
 
 /** Maps a transaction DTO to its cached entity. */

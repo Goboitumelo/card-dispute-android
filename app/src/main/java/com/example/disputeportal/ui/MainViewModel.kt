@@ -17,6 +17,16 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import retrofit2.HttpException
 import java.io.IOException
+import java.io.InterruptedIOException
+import kotlin.coroutines.cancellation.CancellationException
+
+private const val NETWORK_ERROR = "Could not reach the server. Check that the API is running."
+private const val TIMEOUT_ERROR = "The request timed out. Check the connection and try again."
+private const val UNEXPECTED_ERROR = "An unexpected error occurred. Try again."
+
+/** OkHttp reports timeouts as [InterruptedIOException], so they get their own message. */
+private fun networkError(e: IOException): String =
+    if (e is InterruptedIOException) TIMEOUT_ERROR else NETWORK_ERROR
 
 data class DisputeRow(
     val dispute: DisputeEntity,
@@ -71,17 +81,40 @@ class MainViewModel(
     val history: StateFlow<HistoryState> = _history.asStateFlow()
 
     /**
-     * Stores the credentials, clears the cache, and loads data for the new user.
+     * Exchanges the credentials for a bearer token, clears the cache, and loads data for the new user.
      *
      * @param email the email address, trimmed before use
      * @param password the user's password
      */
     fun signIn(email: String, password: String) {
         viewModelScope.launch {
+            _state.value = SyncState(loading = true)
+            val address = email.trim()
+            val token = try {
+                repository.login(address, password)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _state.value = signInFailure(e)
+                return@launch
+            }
             repository.clearCache() // Never show the previous user's cached data.
-            session.signIn(email.trim(), password)
+            session.signIn(address, token)
             refresh()
         }
+    }
+
+    /**
+     * Maps a failed sign-in request to the [SyncState] shown on the login screen.
+     *
+     * @param e the exception from the login request
+     * @return the state to display
+     */
+    private fun signInFailure(e: Exception): SyncState = when {
+        e is HttpException && e.code() == 401 -> SyncState(error = "Email or password is incorrect.")
+        e is HttpException -> SyncState(error = "The server returned an error (${e.code()}).")
+        e is IOException -> SyncState(error = networkError(e))
+        else -> SyncState(error = UNEXPECTED_ERROR)
     }
 
     /**
@@ -98,19 +131,34 @@ class MainViewModel(
             } catch (e: HttpException) {
                 if (e.code() == 401) {
                     session.signOut()
-                    SyncState(error = "Email or password is incorrect.")
+                    SyncState(error = "Your session has expired. Sign in again.")
                 } else {
                     SyncState(error = "The server returned an error (${e.code()}).")
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: IOException) {
-                SyncState(error = "Could not reach the server. Check that the API is running.")
+                SyncState(error = networkError(e))
+            } catch (e: Exception) {
+                SyncState(error = UNEXPECTED_ERROR)
             }
         }
     }
 
-    /** Signs out and resets the cached data and all screen state. */
+    /**
+     * Revokes the token on the server, then signs out and resets the cached data and all screen state.
+     *
+     * Revocation is best-effort, so a failed call does not block sign-out. The token also expires on the server.
+     */
     fun signOut() {
         viewModelScope.launch {
+            try {
+                repository.logout()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // Signing out locally must still work when the server is unreachable.
+            }
             session.signOut()
             repository.clearCache()
             _state.value = SyncState()
@@ -185,8 +233,12 @@ class MainViewModel(
                     404 -> HistoryState(error = "That dispute no longer exists.")
                     else -> HistoryState(error = "The server returned an error (${e.code()}).")
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: IOException) {
-                HistoryState(error = "Could not reach the server. Check that the API is running.")
+                HistoryState(error = networkError(e))
+            } catch (e: Exception) {
+                HistoryState(error = UNEXPECTED_ERROR)
             }
         }
     }
@@ -197,7 +249,10 @@ class MainViewModel(
     }
 
     /**
-     * Runs [block] while [action] is busy and maps any failure to an error message.
+     * Runs [block] while [action] is busy, then calls [onSuccess] and reloads [state].
+     *
+     * A failed reload is shown through [state], so it does not hide that the write succeeded.
+     * Any failure of [block] is mapped to an error message in [action].
      *
      * @param conflictMessage message shown for a 409 response
      * @param onSuccess called after [block] succeeds
@@ -213,9 +268,10 @@ class MainViewModel(
             block()
             _action.value = ActionState()
             onSuccess()
-        } catch (e: HttpException) {
-            _action.value = failure(e, conflictMessage)
-        } catch (e: IOException) {
+            refresh()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
             _action.value = failure(e, conflictMessage)
         }
     }
@@ -227,7 +283,7 @@ class MainViewModel(
      * @param conflictMessage message shown for a 409 response
      * @return the action state to display
      */
-    private fun failure(e: Exception, conflictMessage: String): ActionState = when {
+    private fun failure(e: Throwable, conflictMessage: String): ActionState = when {
         e is HttpException && e.code() == 401 -> {
             session.signOut()
             ActionState(error = "Your session has expired. Sign in again.")
@@ -238,6 +294,7 @@ class MainViewModel(
         e is HttpException && e.code() == 422 ->
             ActionState(error = "The dispute window has closed or the amount is too high.")
         e is HttpException -> ActionState(error = "The server returned an error (${e.code()}).")
-        else -> ActionState(error = "Could not reach the server. Check that the API is running.")
+        e is IOException -> ActionState(error = networkError(e))
+        else -> ActionState(error = UNEXPECTED_ERROR)
     }
 }

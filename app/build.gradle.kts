@@ -4,6 +4,9 @@ plugins {
     alias(libs.plugins.ksp)
 }
 
+// Release builds need an HTTPS API URL: pass it with -PapiBaseUrl=https://... (see tasks check below).
+val apiBaseUrl = providers.gradleProperty("apiBaseUrl")
+
 android {
     namespace = "com.example.disputeportal"
     compileSdk = 37
@@ -14,14 +17,31 @@ android {
         targetSdk = 37
         versionCode = 1
         versionName = "0.1.0"
+    }
 
-        // 10.0.2.2 is the Android emulator's alias for the host machine.
-        buildConfigField("String", "API_BASE_URL", "\"http://10.0.2.2:8080/\"")
+    // Optional release signing. Set these in ~/.gradle/gradle.properties or pass with -P; never commit them.
+    signingConfigs {
+        if (providers.gradleProperty("releaseKeystorePath").isPresent) {
+            create("release") {
+                storeFile = file(providers.gradleProperty("releaseKeystorePath").get())
+                storePassword = providers.gradleProperty("releaseStorePassword").get()
+                keyAlias = providers.gradleProperty("releaseKeyAlias").get()
+                keyPassword = providers.gradleProperty("releaseKeyPassword").get()
+            }
+        }
     }
 
     buildTypes {
+        debug {
+            // 10.0.2.2 is the Android emulator's alias for the host machine.
+            buildConfigField("String", "API_BASE_URL", "\"http://10.0.2.2:8080/\"")
+        }
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            signingConfig = signingConfigs.findByName("release")
+            buildConfigField("String", "API_BASE_URL", "\"${apiBaseUrl.orNull.orEmpty()}\"")
         }
     }
 
@@ -56,4 +76,15 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.mockk)
+}
+
+// Fail release builds early when no HTTPS API URL is provided, instead of shipping a broken app.
+tasks.configureEach {
+    if (name == "assembleRelease" || name == "bundleRelease") {
+        doFirst {
+            require(apiBaseUrl.orNull?.startsWith("https://") == true) {
+                "Pass an https apiBaseUrl, for example -PapiBaseUrl=https://api.example.com/"
+            }
+        }
+    }
 }

@@ -41,4 +41,17 @@ interface DisputeApi {
      */
     @GET("api/disputes/{id}/history")
     suspend fun history(@Path("id") id: String): List<HistoryDto>
+
+    /**
+     * Exchanges the customer's credentials for a bearer token.
+     *
+     * @param request the email and password
+     * @return the issued token
+     */
+    @POST("api/auth/login")
+    suspend fun login(@Body request: LoginRequestDto): LoginResponseDto
+
+    /** Revokes the bearer token that authenticates this request. */
+    @POST("api/auth/logout")
+    suspend fun logout()
 }
