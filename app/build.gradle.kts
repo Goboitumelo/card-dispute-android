@@ -76,6 +76,17 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.mockk)
+
+    // Instrumented tests run on a device. MockWebServer stands in for the API.
+    androidTestImplementation(platform(libs.androidx.compose.bom))
+    androidTestImplementation("androidx.compose.ui:ui-test-junit4")
+    debugImplementation("androidx.compose.ui:ui-test-manifest")
+    androidTestImplementation("androidx.test:runner:1.6.2")
+    androidTestImplementation("androidx.test.ext:junit:1.2.1")
+    // Compose's test rule drives Espresso; older Espresso cannot inject input on API 37.
+    androidTestImplementation("androidx.test.espresso:espresso-core:3.7.0")
+    // Must match the OkHttp version Retrofit resolves to (4.12.0).
+    androidTestImplementation("com.squareup.okhttp3:mockwebserver:4.12.0")
 }
 
 // Fail release builds early when no HTTPS API URL is provided, instead of shipping a broken app.
