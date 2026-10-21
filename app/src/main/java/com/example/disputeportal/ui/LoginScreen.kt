@@ -24,10 +24,15 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 
+private val EMAIL_PATTERN = Regex("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")
+private const val MIN_PASSWORD_LENGTH = 8
+
 @Composable
 fun LoginScreen(state: SyncState, onSignIn: (String, String) -> Unit) {
     var email by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
+    val emailValid = EMAIL_PATTERN.matches(email.trim())
+    val passwordValid = password.length >= MIN_PASSWORD_LENGTH
 
     Column(
         modifier = Modifier
@@ -43,6 +48,10 @@ fun LoginScreen(state: SyncState, onSignIn: (String, String) -> Unit) {
             onValueChange = { email = it },
             label = { Text("Email") },
             singleLine = true,
+            isError = email.isNotEmpty() && !emailValid,
+            supportingText = {
+                if (email.isNotEmpty() && !emailValid) Text("Enter a valid email address.")
+            },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
             modifier = Modifier.fillMaxWidth(),
         )
@@ -53,6 +62,12 @@ fun LoginScreen(state: SyncState, onSignIn: (String, String) -> Unit) {
             onValueChange = { password = it },
             label = { Text("Password") },
             singleLine = true,
+            isError = password.isNotEmpty() && !passwordValid,
+            supportingText = {
+                if (password.isNotEmpty() && !passwordValid) {
+                    Text("Password must be at least $MIN_PASSWORD_LENGTH characters.")
+                }
+            },
             visualTransformation = PasswordVisualTransformation(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
             modifier = Modifier.fillMaxWidth(),
@@ -67,7 +82,7 @@ fun LoginScreen(state: SyncState, onSignIn: (String, String) -> Unit) {
 
         Button(
             onClick = { onSignIn(email, password) },
-            enabled = !state.loading && email.isNotBlank() && password.isNotBlank(),
+            enabled = !state.loading && emailValid && passwordValid,
             modifier = Modifier.fillMaxWidth(),
         ) {
             if (state.loading) {

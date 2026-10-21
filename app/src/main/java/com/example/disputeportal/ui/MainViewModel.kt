@@ -101,6 +101,9 @@ class MainViewModel(
         viewModelScope.launch {
             session.signOut()
             repository.clearCache()
+            _state.value = SyncState()
+            _action.value = ActionState()
+            _history.value = HistoryState()
         }
     }
 
