@@ -10,6 +10,7 @@ import com.example.disputeportal.data.local.DisputeEntity
 import com.example.disputeportal.data.local.TransactionEntity
 import com.example.disputeportal.data.remote.DisputeApi
 import com.example.disputeportal.data.remote.DisputeDto
+import com.example.disputeportal.data.remote.HistoryDto
 import com.example.disputeportal.data.remote.TransactionDto
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -51,6 +52,9 @@ class DisputeRepository(
         api.withdraw(disputeId, WithdrawRequestDto(note = null))
         refreshAfterWrite()
     }
+
+    // Not cached: history is small and only needed when a dispute is opened.
+    suspend fun history(disputeId: String): List<HistoryDto> = api.history(disputeId)
 
     // The write succeeded, so a failed cache refresh is ignored; Refresh retries it.
     private suspend fun refreshAfterWrite() {

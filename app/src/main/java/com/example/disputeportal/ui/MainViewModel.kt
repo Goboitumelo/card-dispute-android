@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.disputeportal.data.DisputeRepository
 import com.example.disputeportal.data.local.DisputeEntity
 import com.example.disputeportal.data.local.TransactionEntity
+import com.example.disputeportal.data.remote.HistoryDto
 import com.example.disputeportal.session.Login
 import com.example.disputeportal.session.Session
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -30,6 +31,12 @@ data class SyncState(
 
 data class ActionState(
     val busy: Boolean = false,
+    val error: String? = null,
+)
+
+data class HistoryState(
+    val loading: Boolean = false,
+    val entries: List<HistoryDto> = emptyList(),
     val error: String? = null,
 )
 
@@ -59,6 +66,9 @@ class MainViewModel(
 
     private val _action = MutableStateFlow(ActionState())
     val action: StateFlow<ActionState> = _action.asStateFlow()
+
+    private val _history = MutableStateFlow(HistoryState())
+    val history: StateFlow<HistoryState> = _history.asStateFlow()
 
     fun signIn(email: String, password: String) {
         viewModelScope.launch {
@@ -124,6 +134,30 @@ class MainViewModel(
 
     fun clearAction() {
         _action.value = ActionState()
+    }
+
+    fun loadHistory(disputeId: String) {
+        viewModelScope.launch {
+            _history.value = HistoryState(loading = true)
+            _history.value = try {
+                HistoryState(entries = repository.history(disputeId))
+            } catch (e: HttpException) {
+                when (e.code()) {
+                    401 -> {
+                        session.signOut()
+                        HistoryState(error = "Your session has expired. Sign in again.")
+                    }
+                    404 -> HistoryState(error = "That dispute no longer exists.")
+                    else -> HistoryState(error = "The server returned an error (${e.code()}).")
+                }
+            } catch (e: IOException) {
+                HistoryState(error = "Could not reach the server. Check that the API is running.")
+            }
+        }
+    }
+
+    fun clearHistory() {
+        _history.value = HistoryState()
     }
 
     private suspend fun runAction(

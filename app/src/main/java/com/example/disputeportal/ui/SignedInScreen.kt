@@ -42,10 +42,14 @@ fun SignedInScreen(
     onSubmitDispute: (transactionId: String, reason: String, description: String, amountMinor: Long, onDone: () -> Unit) -> Unit,
     onWithdraw: (disputeId: String) -> Unit,
     onClearAction: () -> Unit,
+    history: HistoryState,
+    onLoadHistory: (disputeId: String) -> Unit,
+    onClearHistory: () -> Unit,
 ) {
     var tab by rememberSaveable { mutableIntStateOf(0) }
     var draftTransactionId by rememberSaveable { mutableStateOf<String?>(null) }
     var withdrawTargetId by rememberSaveable { mutableStateOf<String?>(null) }
+    var historyDisputeId by rememberSaveable { mutableStateOf<String?>(null) }
 
     val draft = transactions.firstOrNull { it.id == draftTransactionId }
     if (draft != null) {
@@ -59,6 +63,20 @@ fun SignedInScreen(
             },
             onSubmit = { reason, description, amountMinor ->
                 onSubmitDispute(draft.id, reason, description, amountMinor) { draftTransactionId = null }
+            },
+        )
+        return
+    }
+
+    val historyRow = disputes.firstOrNull { it.dispute.id == historyDisputeId }
+    if (historyRow != null) {
+        DisputeHistoryScreen(
+            row = historyRow,
+            state = history,
+            onLoad = onLoadHistory,
+            onBack = {
+                historyDisputeId = null
+                onClearHistory()
             },
         )
         return
@@ -113,6 +131,7 @@ fun SignedInScreen(
                     rows = disputes,
                     busy = action.busy,
                     onWithdrawRequest = { withdrawTargetId = it },
+                    onOpenHistory = { historyDisputeId = it },
                 )
             } else {
                 TransactionsList(
@@ -133,6 +152,7 @@ private fun DisputesList(
     rows: List<DisputeRow>,
     busy: Boolean,
     onWithdrawRequest: (String) -> Unit,
+    onOpenHistory: (String) -> Unit,
 ) {
     if (rows.isEmpty()) {
         EmptyMessage("No disputes yet.")
@@ -143,7 +163,7 @@ private fun DisputesList(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         items(rows, key = { it.dispute.id }) { row ->
-            Card(Modifier.fillMaxWidth()) {
+            Card(onClick = { onOpenHistory(row.dispute.id) }, modifier = Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp)) {
                     Text(row.merchantName ?: "Unknown merchant", style = MaterialTheme.typography.titleMedium)
                     Text(

@@ -14,6 +14,7 @@ fun DisputeApp(viewModel: MainViewModel) {
     val login by viewModel.login.collectAsStateWithLifecycle()
     val state by viewModel.state.collectAsStateWithLifecycle()
     val action by viewModel.action.collectAsStateWithLifecycle()
+    val history by viewModel.history.collectAsStateWithLifecycle()
     val disputes by viewModel.disputes.collectAsStateWithLifecycle()
     val transactions by viewModel.transactions.collectAsStateWithLifecycle()
 
@@ -23,6 +24,7 @@ fun DisputeApp(viewModel: MainViewModel) {
         SignedInScreen(
             state = state,
             action = action,
+            history = history,
             disputes = disputes,
             transactions = transactions,
             onRefresh = viewModel::refresh,
@@ -30,6 +32,8 @@ fun DisputeApp(viewModel: MainViewModel) {
             onSubmitDispute = viewModel::submitDispute,
             onWithdraw = viewModel::withdrawDispute,
             onClearAction = viewModel::clearAction,
+            onLoadHistory = viewModel::loadHistory,
+            onClearHistory = viewModel::clearHistory,
         )
     }
 }

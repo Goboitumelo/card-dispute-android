@@ -30,3 +30,11 @@ data class SubmitDisputeRequestDto(
 )
 
 data class WithdrawRequestDto(val note: String?)
+
+// Mirrors the backend HistoryResponse. The backend omits changedBy for customers.
+data class HistoryDto(
+    val fromStatus: String?,
+    val toStatus: String,
+    val note: String?,
+    val changedAt: String,
+)

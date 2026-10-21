@@ -17,4 +17,7 @@ interface DisputeApi {
 
     @POST("api/disputes/{id}/withdraw")
     suspend fun withdraw(@Path("id") id: String, @Body request: WithdrawRequestDto): DisputeDto
+
+    @GET("api/disputes/{id}/history")
+    suspend fun history(@Path("id") id: String): List<HistoryDto>
 }
