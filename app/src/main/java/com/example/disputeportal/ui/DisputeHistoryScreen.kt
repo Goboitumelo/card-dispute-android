@@ -22,6 +22,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.disputeportal.data.remote.HistoryDto
 
+/**
+ * Shows the summary and status change history of a dispute.
+ *
+ * @param row the dispute to show
+ * @param state the loaded history, or its loading or error state
+ * @param onLoad called with the dispute ID when the screen opens
+ * @param onBack called when the user leaves the screen
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DisputeHistoryScreen(
@@ -78,6 +86,11 @@ fun DisputeHistoryScreen(
     }
 }
 
+/**
+ * Shows one status change as a card.
+ *
+ * @param entry the status change to show
+ */
 @Composable
 private fun HistoryEntryCard(entry: HistoryDto) {
     Card(Modifier.fillMaxWidth()) {

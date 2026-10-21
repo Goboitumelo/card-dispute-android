@@ -27,10 +27,28 @@ import androidx.compose.ui.unit.dp
 private val EMAIL_PATTERN = Regex("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")
 private const val MIN_PASSWORD_LENGTH = 8
 
+/**
+ * Checks an email address against [EMAIL_PATTERN] after trimming whitespace.
+ *
+ * @param email the address to check
+ * @return true if the address is well formed
+ */
 internal fun isValidEmail(email: String): Boolean = EMAIL_PATTERN.matches(email.trim())
 
+/**
+ * Checks that a password meets the minimum length.
+ *
+ * @param password the password to check
+ * @return true if the password has at least [MIN_PASSWORD_LENGTH] characters
+ */
 internal fun isValidPassword(password: String): Boolean = password.length >= MIN_PASSWORD_LENGTH
 
+/**
+ * Email and password form. Sign in is enabled once both fields are valid.
+ *
+ * @param state the current sync state, used for the error message and loading indicator
+ * @param onSignIn called with the entered email and password
+ */
 @Composable
 fun LoginScreen(state: SyncState, onSignIn: (String, String) -> Unit) {
     var email by rememberSaveable { mutableStateOf("") }

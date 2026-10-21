@@ -30,6 +30,22 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.disputeportal.data.local.TransactionEntity
 
+/**
+ * Signed-in home with the disputes and transactions tabs. Opens the submit and history screens when needed.
+ *
+ * @param state the current sync state
+ * @param action the current action state
+ * @param disputes the disputes to list, with merchant and currency
+ * @param transactions the cached transactions
+ * @param onRefresh called to reload data
+ * @param onSignOut called to sign out
+ * @param onSubmitDispute called with the dispute details and a callback to run on success
+ * @param onWithdraw called with the dispute ID to withdraw
+ * @param onClearAction called to reset the action state
+ * @param history the status history of the selected dispute
+ * @param onLoadHistory called with the dispute ID to load its history
+ * @param onClearHistory called to reset the history state
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SignedInScreen(
@@ -147,6 +163,14 @@ fun SignedInScreen(
     }
 }
 
+/**
+ * Lists disputes. Each row can be tapped for history and withdrawn while it is open.
+ *
+ * @param rows the disputes to show
+ * @param busy true while an action is running, which disables withdraw
+ * @param onWithdrawRequest called with the dispute ID when withdraw is tapped
+ * @param onOpenHistory called with the dispute ID when a row is tapped
+ */
 @Composable
 private fun DisputesList(
     rows: List<DisputeRow>,
@@ -188,6 +212,13 @@ private fun DisputesList(
     }
 }
 
+/**
+ * Lists transactions, with a dispute button for each one that has no open dispute.
+ *
+ * @param transactions the transactions to show
+ * @param openTransactionIds IDs of transactions that already have an open dispute
+ * @param onDispute called with the transaction ID when dispute is tapped
+ */
 @Composable
 private fun TransactionsList(
     transactions: List<TransactionEntity>,
@@ -232,6 +263,11 @@ private fun TransactionsList(
 // Mirrors DisputeStatus.OPEN on the backend.
 private val OPEN_STATUSES = setOf("SUBMITTED", "UNDER_REVIEW", "INFO_REQUESTED")
 
+/**
+ * Shows a message in place of an empty list.
+ *
+ * @param text the message to show
+ */
 @Composable
 private fun EmptyMessage(text: String) {
     Text(text, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(16.dp))

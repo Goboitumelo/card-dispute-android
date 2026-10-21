@@ -47,13 +47,27 @@ private val DISPUTE_REASONS = listOf(
 
 private const val MAX_DESCRIPTION = 1000
 
-// Converts "12.50" to 1250. Returns null for invalid, non-positive, or over-precise input.
+/**
+ * Parses a decimal amount into minor units.
+ *
+ * @param text the amount, such as "12.50"
+ * @return the amount in minor units (cents), or null if the input is invalid, not positive, or has more than two decimal places
+ */
 private fun parseMinorUnits(text: String): Long? {
     val amount = text.trim().toBigDecimalOrNull() ?: return null
     if (amount.signum() <= 0 || amount.stripTrailingZeros().scale() > 2) return null
     return runCatching { amount.movePointRight(2).longValueExact() }.getOrNull()
 }
 
+/**
+ * Form for submitting a dispute against a transaction.
+ *
+ * @param transaction the transaction being disputed
+ * @param busy true while the submission is running
+ * @param error the error message to show, if any
+ * @param onBack called when the user leaves the form
+ * @param onSubmit called with the reason, description and amount in minor units
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SubmitDisputeScreen(

@@ -70,6 +70,12 @@ class MainViewModel(
     private val _history = MutableStateFlow(HistoryState())
     val history: StateFlow<HistoryState> = _history.asStateFlow()
 
+    /**
+     * Stores the credentials, clears the cache, and loads data for the new user.
+     *
+     * @param email the email address, trimmed before use
+     * @param password the user's password
+     */
     fun signIn(email: String, password: String) {
         viewModelScope.launch {
             repository.clearCache() // Never show the previous user's cached data.
@@ -78,6 +84,11 @@ class MainViewModel(
         }
     }
 
+    /**
+     * Reloads transactions and disputes from the API and updates [state].
+     *
+     * A 401 response signs the user out.
+     */
     fun refresh() {
         viewModelScope.launch {
             _state.value = SyncState(loading = true)
@@ -97,6 +108,7 @@ class MainViewModel(
         }
     }
 
+    /** Signs out and resets the cached data and all screen state. */
     fun signOut() {
         viewModelScope.launch {
             session.signOut()
@@ -107,6 +119,15 @@ class MainViewModel(
         }
     }
 
+    /**
+     * Submits a dispute and runs [onDone] if it succeeds.
+     *
+     * @param transactionId the transaction being disputed
+     * @param reason one of the backend `DisputeReason` names
+     * @param description the customer's explanation
+     * @param amountMinor the disputed amount in minor units
+     * @param onDone called after a successful submission
+     */
     fun submitDispute(
         transactionId: String,
         reason: String,
@@ -124,6 +145,11 @@ class MainViewModel(
         }
     }
 
+    /**
+     * Withdraws an open dispute.
+     *
+     * @param disputeId the dispute to withdraw
+     */
     fun withdrawDispute(disputeId: String) {
         viewModelScope.launch {
             runAction(
@@ -135,10 +161,16 @@ class MainViewModel(
         }
     }
 
+    /** Resets [action] to idle. */
     fun clearAction() {
         _action.value = ActionState()
     }
 
+    /**
+     * Loads the status history of a dispute into [history].
+     *
+     * @param disputeId the dispute to load
+     */
     fun loadHistory(disputeId: String) {
         viewModelScope.launch {
             _history.value = HistoryState(loading = true)
@@ -159,10 +191,18 @@ class MainViewModel(
         }
     }
 
+    /** Resets [history] to its initial state. */
     fun clearHistory() {
         _history.value = HistoryState()
     }
 
+    /**
+     * Runs [block] while [action] is busy and maps any failure to an error message.
+     *
+     * @param conflictMessage message shown for a 409 response
+     * @param onSuccess called after [block] succeeds
+     * @param block the network call to run
+     */
     private suspend fun runAction(
         conflictMessage: String,
         onSuccess: () -> Unit,
@@ -180,6 +220,13 @@ class MainViewModel(
         }
     }
 
+    /**
+     * Maps a failed request to the [ActionState] shown to the user.
+     *
+     * @param e the exception from the request
+     * @param conflictMessage message shown for a 409 response
+     * @return the action state to display
+     */
     private fun failure(e: Exception, conflictMessage: String): ActionState = when {
         e is HttpException && e.code() == 401 -> {
             session.signOut()

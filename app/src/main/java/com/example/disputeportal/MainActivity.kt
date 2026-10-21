@@ -12,6 +12,11 @@ import com.example.disputeportal.ui.MainViewModel
 import com.example.disputeportal.ui.theme.DisputeTheme
 
 class MainActivity : ComponentActivity() {
+    /**
+     * Enables edge-to-edge display and sets the Compose content.
+     *
+     * @param savedInstanceState the saved state, if any
+     */
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
