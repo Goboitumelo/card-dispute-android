@@ -1,0 +1,11 @@
+.git
+.github
+.gradle
+.idea
+.kotlin
+build
+app/build
+dist
+local.properties
+*.md
+.DS_Store
